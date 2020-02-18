@@ -50,6 +50,59 @@ const sendTransaction = async (body) => {
   })
   .on('error', console.error);
 }
+const getTransactionsByAccount = async (myaccount, startBlockNumber, endBlockNumber) => {
+
+  if (endBlockNumber == null || endBlockNumber == "") {
+    endBlockNumber = await web3.eth.getBlockNumber();
+    console.log("Using endBlockNumber: " + endBlockNumber);
+  }
+  if (startBlockNumber == null || startBlockNumber == "") {
+    startBlockNumber = endBlockNumber - 1000;
+    console.log("Using startBlockNumber: " + startBlockNumber);
+  }
+  console.log("Searching for transactions to/from account \"" + myaccount + "\" within blocks "  + startBlockNumber + " and " + endBlockNumber);
+  var Trs = [];
+  for (var i = startBlockNumber; i <= endBlockNumber; i++) {
+    if (i % 1000 == 0) {
+      console.log("Searching block " + i);
+    }
+    var block = await web3.eth.getBlock(i, true);
+    if (block != null && block.transactions != null) {
+      block.transactions.forEach( function(e) {
+        if (myaccount == "*" || myaccount == e.from || myaccount == e.to) {
+          console.log("  tx hash          : " + e.hash + "\n"
+            + "   nonce           : " + e.nonce + "\n"
+            + "   blockHash       : " + e.blockHash + "\n"
+            + "   blockNumber     : " + e.blockNumber + "\n"
+            + "   transactionIndex: " + e.transactionIndex + "\n"
+            + "   from            : " + e.from + "\n" 
+            + "   to              : " + e.to + "\n"
+            + "   value           : " + e.value + "\n"
+            + "   time            : " + block.timestamp + " " + new Date(block.timestamp * 1000).toGMTString() + "\n"
+            + "   gasPrice        : " + e.gasPrice + "\n"
+            + "   gas             : " + e.gas + "\n"
+            + "   input           : " + e.input);
+            const tr = {
+              tx_hash          : e.hash,
+                 nonce           : e.nonce,
+                 blockHash       : e.blockHash, 
+                 blockNumber     : e.blockNumber, 
+                 transactionIndex: e.transactionIndex, 
+                 from            : e.from,
+                 to              : e.to,
+                 value           : e.value, 
+                 time            : block.timestamp + new Date(block.timestamp * 1000).toGMTString(),
+                 gasPrice        : e.gasPrice,
+                 gas             : e.gas,
+                 input           : e.input
+            }
+            Trs.push(tr);
+        }
+      })
+    }
+  }
+  return Trs;
+};
 app.use(bodyParser.json());
 app.get('/', async (req, res) => {
     const blocknumber = await web3.eth.getBlockNumber();
@@ -75,6 +128,14 @@ app.post('/currentBlock', async (req, res) => {
 app.post('/getGasPrice', async (req, res) => {
   const gasPrice = await web3.eth.getGasPrice();
   res.send(`gas price is ${gasPrice}`);
+});
+// 시작 블록, 끝 블록 사이에 존재하는 모든 트랜젝션을 리턴.
+app.post('/getTransactionsByAccount', async (req, res) => {
+  const address = req.body.address;
+  const startBlock = req.body.startBlock;
+  const endBlock = req.body.endBlock;
+  const trs = await getTransactionsByAccount(address, startBlock, endBlock);
+  res.send(trs);
 });
 app.listen(PORT, () => console.log(`server started at ${PORT}`));
 
