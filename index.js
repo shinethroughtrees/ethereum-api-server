@@ -50,6 +50,21 @@ const sendTransaction = async (body) => {
   })
   .on('error', console.error);
 }
+const sendSignedTransaction = async (tr) => {
+  web3.eth.sendSignedTransaction(tr.rawTransaction)
+  .on('confirmation',(confirmationNumber, receipt) => {
+      console.log('=> confirmation: ', confirmationNumber);
+  })
+  .on('transactionHash', hash => {
+      console.log('=> hash');
+      console.log(hash);
+  })
+  .on('receipt', receipt => {
+      console.log('=> receipt');
+      console.log(receipt);
+  })
+  .on('error', console.error);
+}
 const getTransactionsByAccount = async (myaccount, startBlockNumber, endBlockNumber) => {
 
   if (endBlockNumber == null || endBlockNumber == "") {
@@ -113,6 +128,11 @@ app.get('/', async (req, res) => {
 app.post('/send', async (req, res) => {
   await sendTransaction(req.body);
   res.send("sending transaction");
+});
+// 계좌이체 
+app.post('/sendSignedTR', async (req, res) => {
+  await sendSignedTransaction(req.body);
+  res.send("sending signed transaction");
 });
 // 계좌조회 
 app.post('/inspect', async (req, res) => {
